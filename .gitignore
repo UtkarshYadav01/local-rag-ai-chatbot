@@ -5,5 +5,5 @@ backup
 chroma
 data
 data from ui
-.idea
+.idea/
 __pycache__
