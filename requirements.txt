@@ -1,0 +1,7 @@
+streamlit
+langchain-ollama
+langchain-chroma
+langchain-community
+langchain-core
+langchain-text-splitters
+unstructured[docx]
