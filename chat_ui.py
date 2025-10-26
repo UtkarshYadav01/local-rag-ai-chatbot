@@ -2,7 +2,7 @@ import os
 
 import streamlit as st
 
-from populate_database_docs_updated import run_pipeline, query_rag
+from rag_pipeline import run_pipeline, query_rag
 
 st.title("Chat with LLaMA via Ollama")
 
