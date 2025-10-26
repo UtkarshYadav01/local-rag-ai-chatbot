@@ -2,6 +2,7 @@ import os
 
 import streamlit as st
 
+from config import DATA_PATH
 from rag_pipeline import run_pipeline, query_rag, clear_database
 
 st.title("Chatbot Assistant via RAG LLM")
@@ -14,12 +15,12 @@ if "chat" not in st.session_state:
 st.sidebar.header("📁 Upload a File")
 
 # delete button
-if st.sidebar.button("🧹 Reset Database"):
-    try:
-        clear_database()
-        st.sidebar.success("✅ Database cleared successfully!")
-    except Exception as e:
-        st.sidebar.error(f"❌ Error: {str(e)}")
+# if st.sidebar.button("🧹 Reset Database"):
+#     try:
+#         clear_database()
+#         st.sidebar.success("✅ Database cleared successfully!")
+#     except Exception as e:
+#         st.sidebar.error(f"❌ Error: {str(e)}")
 
 uploaded_file = st.sidebar.file_uploader("Upload a document", type=["txt", "pdf", "docx"])
 
@@ -27,11 +28,10 @@ if uploaded_file is not None:
     st.sidebar.success(f"Uploaded: {uploaded_file.name}")
 
     # Create the folder if it doesn't exist
-    save_dir = "data"
-    os.makedirs(save_dir, exist_ok=True)
+    os.makedirs(DATA_PATH, exist_ok=True)
 
     # Define save path
-    save_path = os.path.join(save_dir, uploaded_file.name)
+    save_path = os.path.join(DATA_PATH, uploaded_file.name)
 
     with open(save_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
