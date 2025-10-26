@@ -2,7 +2,7 @@ import os
 
 import streamlit as st
 
-from rag_pipeline import run_pipeline, query_rag
+from rag_pipeline import run_pipeline, query_rag, clear_database
 
 st.title("Chat with LLaMA via Ollama")
 
@@ -12,6 +12,11 @@ if "chat" not in st.session_state:
 
 # --- SIDEBAR SECTION ---
 st.sidebar.header("📁 Upload a File")
+
+if st.sidebar.button("🧹 Reset Database"):
+    clear_database()
+    st.sidebar.success("Database cleared successfully!")
+
 uploaded_file = st.sidebar.file_uploader("Upload a document", type=["txt", "pdf", "docx"])
 
 if uploaded_file is not None:
