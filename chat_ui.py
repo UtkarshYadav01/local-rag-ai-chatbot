@@ -4,7 +4,7 @@ import streamlit as st
 
 from rag_pipeline import run_pipeline, query_rag, clear_database
 
-st.title("Chat with LLaMA via Ollama")
+st.title("Chatbot Assistant via RAG LLM")
 
 # Initialize chat history
 if "chat" not in st.session_state:

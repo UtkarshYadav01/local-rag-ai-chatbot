@@ -32,9 +32,10 @@ def main():
 
 # helper method to start processing pipeline (loading → splitting → embedding)
 def run_pipeline():
+    print("\n================ RAG Pipeline ================\n")
     chunks = split_documents(load_all_documents())
     add_to_chroma(chunks)
-    print("\n")
+    print("\n=============================================\n")
 
 
 # 1.load data v1
