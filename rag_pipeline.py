@@ -55,8 +55,8 @@ def load_documents(folder_path: str = DATA_PATH):
 # 2. Split data
 def split_documents(documents: list[Document]):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=100,
+        chunk_size=1000,
+        chunk_overlap=200,
         length_function=len,
         is_separator_regex=False,
     )
@@ -121,7 +121,7 @@ def add_to_chroma(chunks: list[Document]):
         logging.info("ℹ️ No new chunks to add — everything already embedded.")
 
 
-# 7. Reset DB (safe)
+# 7. Reset DB (optional)
 def clear_database():
     if os.path.exists(CHROMA_PATH):
         shutil.rmtree(CHROMA_PATH)
@@ -131,50 +131,60 @@ def clear_database():
 
 
 # 8. Ask
-def query_rag(query_text: str):
-    # a. Prepare the DB.
+def query_rag(query_text: str, chat_history: list = None):
     db = get_chroma_db()
 
-    # b. template var
     PROMPT_TEMPLATE = """
-    You are a helpful assistant. Answer the question using the context below.
-    If the answer is not in the context, say you don't know — do not fabricate.
+    You are a helpful assistant having a conversation with the user.
+    Use both the chat history and the provided context to answer.
+    If you are unsure, say "I don't know" — do not fabricate.
+
+    Chat history:
+    {history}
 
     Context:
     {context}
 
-    Question:
+    User question:
     {question}
     """
 
-    # c. Search the DB.
+    # a. Retrieve top relevant chunks
     results = db.similarity_search_with_score(query_text, k=5)
     context_text = "\n\n---\n\n".join([doc.page_content for doc, _ in results])
 
-    # d. generate complete prompt
-    prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE).format(
-        context=context_text, question=query_text
-    )
-    # logging.info(prompt)
+    # b. Convert chat history into readable text
+    history_text = ""
+    if chat_history:
+        history_text = "\n".join(
+            [f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history[-5:]]
+        )
 
-    # e.invoke llm
-    model = OllamaLLM(model=LLM_MODEL)
+    # c. Fill in the prompt
+    prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE).format(
+        context=context_text,
+        question=query_text,
+        history=history_text or "No previous conversation."
+    )
+
+    # d.invoke llm and Generate response
+    model = OllamaLLM(model=LLM_MODEL, num_ctx=16000, )
     response_text = model.invoke(prompt)
 
-    # f. get the original source
+    # e. get the original source
     sources = [doc.metadata.get("id") for doc, _ in results]
     formated_response = f"{response_text}\n\n**Sources:** {sources}"
     # logging.info(formated_response)
 
-    return response_text
+    return formated_response
 
 
 # 9. Run full pipeline
 def run_pipeline():
-    logging.info("\n================ RAG Pipeline ================\n")
+    logging.info("================ RAG Pipeline ================")
     chunks = split_documents(load_documents())
     add_to_chroma(chunks)
-    logging.info("\n=============================================\n")
+    logging.info("=============================================\n")
 
 
 if __name__ == "__main__":
