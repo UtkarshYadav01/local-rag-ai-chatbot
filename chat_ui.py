@@ -13,9 +13,13 @@ if "chat" not in st.session_state:
 # --- SIDEBAR SECTION ---
 st.sidebar.header("📁 Upload a File")
 
+# delete button
 if st.sidebar.button("🧹 Reset Database"):
-    clear_database()
-    st.sidebar.success("Database cleared successfully!")
+    try:
+        clear_database()
+        st.sidebar.success("✅ Database cleared successfully!")
+    except Exception as e:
+        st.sidebar.error(f"❌ Error: {str(e)}")
 
 uploaded_file = st.sidebar.file_uploader("Upload a document", type=["txt", "pdf", "docx"])
 
@@ -35,9 +39,12 @@ if uploaded_file is not None:
 
     # Button to run pipeline
     if st.sidebar.button("🚀 Process File"):
-        st.sidebar.info("Processing started...")
-        run_pipeline()
-        st.sidebar.success("✅ Processing complete!")
+        try:
+            st.sidebar.info("Processing started...")
+            run_pipeline()
+            st.sidebar.success("✅ Processing complete!")
+        except Exception as e:
+            st.sidebar.error(f"❌ Error: {str(e)}")
 
 # --------------------------------
 
