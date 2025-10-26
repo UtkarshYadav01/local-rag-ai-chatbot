@@ -1,10 +1,10 @@
 import argparse
 import os
 import shutil
-from langchain_community.document_loaders import UnstructuredWordDocumentLoader
-from langchain_community.llms.ollama import Ollama
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader, UnstructuredFileLoader, \
+    JSONLoader, TextLoader, CSVLoader
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
@@ -28,13 +28,54 @@ def main():
     add_to_chroma(chunks)
     # query_rag(query_text)
 
-#helper method to start processing pipeline (loading → splitting → embedding)
+
+# helper method to start processing pipeline (loading → splitting → embedding)
 def run_pipeline():
-    chunks = split_documents(load_documents_from_folder())
+    chunks = split_documents(load_all_documents())
     add_to_chroma(chunks)
 
 
-def load_documents_from_folder(folder_path="data from ui"):
+def load_all_documents(folder_path: str = "data"):
+    """
+    Load all documents (PDF, DOCX, JSON, TXT, CSV, etc.) from a folder into LangChain Document objects.
+    """
+
+    docs = []
+    supported_exts = {'.pdf', '.docx', '.json', '.txt', '.csv'}
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            ext = os.path.splitext(file)[-1].lower()
+
+            try:
+                if ext == '.pdf':
+                    loader = PyPDFLoader(file_path)
+                elif ext == '.docx':
+                    loader = UnstructuredWordDocumentLoader(file_path)
+                elif ext == '.json':
+                    loader = JSONLoader(
+                        file_path,
+                        jq_schema=".",  # You can change this if JSON has a specific key
+                        text_content=True
+                    )
+                elif ext == '.txt':
+                    loader = TextLoader(file_path, encoding='utf-8')
+                elif ext == '.csv':
+                    loader = CSVLoader(file_path)
+                else:
+                    # fallback for other formats
+                    loader = UnstructuredFileLoader(file_path)
+
+                docs.extend(loader.load())
+
+            except Exception as e:
+                print(f"❌ Failed to load {file_path}: {e}")
+
+    print(f"✅ Loaded {len(docs)} documents from {folder_path}")
+    return docs
+
+
+def load_documents_from_folder(folder_path="data"):
     documents = []
 
     # Loop through all files in the folder
@@ -46,6 +87,7 @@ def load_documents_from_folder(folder_path="data from ui"):
             documents.extend(docs)  # add all documents from this file to the list
 
     return documents
+
 
 # 1.load data
 def load_documents():
@@ -145,15 +187,38 @@ def query_rag(query_text: str):
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
     # 3. template var
-    PROMPT_TEMPLATE = """
-    Answer the question based only on the following context:
+    # PROMPT_TEMPLATE = """
+    # Answer the question based only on the following context:
+    #
+    # {context}
+    #
+    # ---
+    #
+    # Answer the question based on the above context: {question}
+    # """
 
+    PROMPT_TEMPLATE = """
+    You are an expert AI assistant specialized in analyzing Pharmacy Benefits Management (PBM) RFP documents.
+
+    Your task is to answer questions *strictly and only* based on the information provided in the following context.
+    Do not use any outside knowledge, assumptions, or general information unless explicitly stated in the context.
+
+    If the answer is not clearly stated or cannot be derived from the context, respond with:
+    "I cannot find this information in the provided context."
+
+    ---
+
+    Context:
     {context}
 
     ---
 
-    Answer the question based on the above context: {question}
-    when context is not provided just answer based on your knowledge
+    Question:
+    {question}
+
+    ---
+
+    Answer (concise, factual, and supported by the context):
     """
 
     # 4. Search the DB.
@@ -166,7 +231,7 @@ def query_rag(query_text: str):
     # print(prompt)
 
     # 6.invoke llm
-    model = Ollama(model="llama3")
+    model = OllamaLLM(model="llama3")
     response_text = model.invoke(prompt)
 
     # 7. get the original source

@@ -18,7 +18,7 @@ if uploaded_file is not None:
     st.sidebar.success(f"Uploaded: {uploaded_file.name}")
 
     # Create the folder if it doesn't exist
-    save_dir = "data from ui"
+    save_dir = "data"
     os.makedirs(save_dir, exist_ok=True)
 
     # Define save path
