@@ -10,7 +10,8 @@ from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
 CHROMA_PATH = "chroma"
-DATA_PATH = "data/sample1.docx"
+DATA_PATH = "data"
+LLM_MODEL = "llama3"
 
 
 def main():
@@ -23,7 +24,7 @@ def main():
         clear_database()
 
     # Create (or update) the data store.
-    documents = load_documents()
+    documents = load_all_documents()
     chunks = split_documents(documents)
     add_to_chroma(chunks)
     # query_rag(query_text)
@@ -33,9 +34,31 @@ def main():
 def run_pipeline():
     chunks = split_documents(load_all_documents())
     add_to_chroma(chunks)
+    print("\n")
 
 
-def load_all_documents(folder_path: str = "data"):
+# 1.load data v1
+"""def load_documents():
+    document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
+    return document_loader.load()"""
+
+# 1.load data v2
+"""def load_documents_from_folder(folder_path="data"):
+    documents = []
+
+    # Loop through all files in the folder
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".docx"):  # only load .docx files
+            file_path = os.path.join(folder_path, filename)
+            loader = UnstructuredWordDocumentLoader(file_path)
+            docs = loader.load()
+            documents.extend(docs)  # add all documents from this file to the list
+
+    return documents"""
+
+
+# 1.load data v3
+def load_all_documents(folder_path: str = DATA_PATH):
     """
     Load all documents (PDF, DOCX, JSON, TXT, CSV, etc.) from a folder into LangChain Document objects.
     """
@@ -71,28 +94,8 @@ def load_all_documents(folder_path: str = "data"):
             except Exception as e:
                 print(f"❌ Failed to load {file_path}: {e}")
 
-    print(f"✅ Loaded {len(docs)} documents from {folder_path}")
+    print(f"📃 Loaded {len(docs)} documents from 📂 {folder_path}")
     return docs
-
-
-def load_documents_from_folder(folder_path="data"):
-    documents = []
-
-    # Loop through all files in the folder
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".docx"):  # only load .docx files
-            file_path = os.path.join(folder_path, filename)
-            loader = UnstructuredWordDocumentLoader(file_path)
-            docs = loader.load()
-            documents.extend(docs)  # add all documents from this file to the list
-
-    return documents
-
-
-# 1.load data
-def load_documents():
-    document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
-    return document_loader.load()
 
 
 # 2. split data
@@ -103,7 +106,9 @@ def split_documents(documents: list[Document]):
         length_function=len,
         is_separator_regex=False,
     )
-    return text_splitter.split_documents(documents)
+    chunks = text_splitter.split_documents(documents)
+    print(f"✂️ Split {len(documents)} documents into {len(chunks)} chunks.")
+    return chunks
 
 
 # 3. Generating Unique IDs for Each Chunk
@@ -132,6 +137,7 @@ def calculate_chunk_ids(chunks):
         # Add it to the page meta-data.
         chunk.metadata["id"] = chunk_id
 
+    print(f"🆔 Assigned unique IDs to {len(chunks)} chunk(s)")
     return chunks
 
 
@@ -141,7 +147,8 @@ def get_embedding_function():
     #     credentials_profile_name="default", region_name="us-east-1"
     # )
     # embeddings = OllamaEmbeddings(model="nomic-embed-text")
-    embeddings = OllamaEmbeddings(model="llama3")
+    embeddings = OllamaEmbeddings(model=LLM_MODEL)
+    print(f"🚀 Embedding model initialized: {LLM_MODEL}")
     return embeddings
 
 
@@ -158,7 +165,7 @@ def add_to_chroma(chunks: list[Document]):
     # Add or Update the documents.
     existing_items = db.get(include=[])  # IDs are always included by default
     existing_ids = set(existing_items["ids"])
-    print(f"Number of existing documents in DB: {len(existing_ids)}")
+    print(f"📚 Number of existing documents in DB: {len(existing_ids)}")
 
     # Only add documents that don't exist in the DB.
     new_chunks = []
@@ -174,10 +181,23 @@ def add_to_chroma(chunks: list[Document]):
         print("✅ No new documents to add")
 
 
-# 6. reset db(optional)
-def clear_database():
+# 6. reset db(optional) v1
+"""def clear_database():
     if os.path.exists(CHROMA_PATH):
-        shutil.rmtree(CHROMA_PATH)
+        shutil.rmtree(CHROMA_PATH)"""
+
+
+# 6. reset db(optional) v2
+def clear_database():
+    paths_to_clear = [CHROMA_PATH, DATA_PATH]  # List of directories to clear
+
+    for path in paths_to_clear:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            print(f"Deleted: {path}")
+        else:
+            print(f"Path does not exist: {path}")
+    print("🧹 Database cleared")
 
 
 # 1. ask
@@ -186,7 +206,7 @@ def query_rag(query_text: str):
     embedding_function = get_embedding_function()
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-    # 3. template var
+    # 3. template var v1
     # PROMPT_TEMPLATE = """
     # Answer the question based only on the following context:
     #
@@ -197,6 +217,7 @@ def query_rag(query_text: str):
     # Answer the question based on the above context: {question}
     # """
 
+    # 3. template var v2
     PROMPT_TEMPLATE = """
     You are an expert AI assistant specialized in analyzing Pharmacy Benefits Management (PBM) RFP documents.
 
@@ -231,7 +252,7 @@ def query_rag(query_text: str):
     # print(prompt)
 
     # 6.invoke llm
-    model = OllamaLLM(model="llama3")
+    model = OllamaLLM(model=LLM_MODEL)
     response_text = model.invoke(prompt)
 
     # 7. get the original source
