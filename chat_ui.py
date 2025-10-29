@@ -3,7 +3,7 @@ import os
 import streamlit as st
 
 from config import DATA_PATH
-from llm_clients import ask_gpt
+from ask_llms import ask_gpt
 from rag_pipeline import run_pipeline
 
 st.title("Chatbot Assistant via RAG LLM")
