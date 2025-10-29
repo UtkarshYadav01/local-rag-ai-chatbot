@@ -2,9 +2,9 @@ import os
 
 import streamlit as st
 
-from llm_clients import ask_gpt
 from config import DATA_PATH
-from rag_pipeline import run_pipeline, clear_database, query_rag
+from llm_clients import ask_gpt
+from rag_pipeline import run_pipeline
 
 st.title("Chatbot Assistant via RAG LLM")
 
