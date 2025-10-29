@@ -1,19 +1,19 @@
+import logging
 import os
 import shutil
-import logging
 from datetime import datetime
 from functools import lru_cache
+
+from langchain_chroma import Chroma
 from langchain_community.document_loaders import (
     PyPDFLoader, UnstructuredWordDocumentLoader, UnstructuredFileLoader,
     JSONLoader, TextLoader, CSVLoader
 )
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import OllamaEmbeddings, OllamaLLM
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from config import CHROMA_PATH, DATA_PATH, LLM_MODEL, EMBED_MODEL
+from config import CHROMA_PATH, DATA_PATH, EMBED_MODEL
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -130,56 +130,7 @@ def clear_database():
         logging.info("No Chroma DB found to clear.")
 
 
-# 8. Ask
-def query_rag(query_text: str, chat_history: list = None):
-    db = get_chroma_db()
-
-    PROMPT_TEMPLATE = """
-    You are a helpful assistant having a conversation with the user.
-    Use both the chat history and the provided context to answer.
-    If you are unsure, say "I don't know" — do not fabricate.
-
-    Chat history:
-    {history}
-
-    Context:
-    {context}
-
-    User question:
-    {question}
-    """
-
-    # a. Retrieve top relevant chunks
-    results = db.similarity_search_with_score(query_text, k=5)
-    context_text = "\n\n---\n\n".join([doc.page_content for doc, _ in results])
-
-    # b. Convert chat history into readable text
-    history_text = ""
-    if chat_history:
-        history_text = "\n".join(
-            [f"{msg['role'].capitalize()}: {msg['content']}" for msg in chat_history[-5:]]
-        )
-
-    # c. Fill in the prompt
-    prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE).format(
-        context=context_text,
-        question=query_text,
-        history=history_text or "No previous conversation."
-    )
-
-    # d.invoke llm and Generate response
-    model = OllamaLLM(model=LLM_MODEL)
-    response_text = model.invoke(prompt)
-
-    # e. get the original source
-    sources = [doc.metadata.get("id") for doc, _ in results]
-    formated_response = f"{response_text}\n\n**Sources:** {sources}"
-    # logging.info(formated_response)
-
-    return response_text
-
-
-# 9. Run full pipeline
+# 8. Run full pipeline
 def run_pipeline():
     logging.info("================ RAG Pipeline ================")
     chunks = split_documents(load_documents())

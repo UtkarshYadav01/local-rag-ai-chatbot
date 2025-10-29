@@ -2,7 +2,7 @@ import os
 
 import streamlit as st
 
-from ask_azure_openai import ask_gpt
+from llm_clients import ask_gpt
 from config import DATA_PATH
 from rag_pipeline import run_pipeline, clear_database, query_rag
 
