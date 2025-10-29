@@ -168,7 +168,7 @@ def query_rag(query_text: str, chat_history: list = None):
     )
 
     # d.invoke llm and Generate response
-    model = OllamaLLM(model=LLM_MODEL, num_ctx=16000, )
+    model = OllamaLLM(model=LLM_MODEL)
     response_text = model.invoke(prompt)
 
     # e. get the original source
@@ -176,7 +176,7 @@ def query_rag(query_text: str, chat_history: list = None):
     formated_response = f"{response_text}\n\n**Sources:** {sources}"
     # logging.info(formated_response)
 
-    return formated_response
+    return response_text
 
 
 # 9. Run full pipeline

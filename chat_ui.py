@@ -2,8 +2,9 @@ import os
 
 import streamlit as st
 
+from ask_azure_openai import ask_gpt
 from config import DATA_PATH
-from rag_pipeline import run_pipeline, query_rag, clear_database
+from rag_pipeline import run_pipeline, clear_database, query_rag
 
 st.title("Chatbot Assistant via RAG LLM")
 
@@ -63,7 +64,8 @@ if user_prompt := st.chat_input("Ask something..."):
         with st.spinner("Thinking..."):
             try:
                 # You can modify query_rag to take uploaded_file as an optional argument
-                reply = query_rag(user_prompt)
+                # reply = query_rag(user_prompt)
+                reply = ask_gpt(user_prompt)
             except Exception as e:
                 reply = f"❌ {str(e)}"
             st.markdown(reply)

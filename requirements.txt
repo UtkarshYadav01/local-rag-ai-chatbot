@@ -1,3 +1,5 @@
+openai
+langchain-openai
 streamlit
 langchain-ollama
 langchain-chroma
